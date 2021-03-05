@@ -1,5 +1,6 @@
 from django.conf.urls import url
 from . import views
+from rest_framework.authtoken import views as token
 from rest_framework_simplejwt import views as jwt_views
 
 urlpatterns = [
@@ -10,6 +11,7 @@ urlpatterns = [
     url(r'^dogs/(?P<name>[a-zA-Z0-9_.-]+)/$', views.dogDetails, name= 'dogOwnerDetail'),
     url(r'^walkers/$', views.dogWalkerList ,name = 'dogOwnerList'),
     url(r'^walkers/(?P<name>[a-zA-Z0-9_.-]+)/$', views.dogWalkerDetails, name= 'dogOwnerDetail'),
+    url(r'^api-token-auth/$', token.obtain_auth_token),
     url(r'^api/token/$', jwt_views.TokenObtainPairView.as_view(), name='token_obtain_pair'),
     url(r'^api/token/refresh/$', jwt_views.TokenRefreshView.as_view(), name='token_refresh'),
 ]
