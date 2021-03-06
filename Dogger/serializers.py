@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import Dog, DogOwner, DogWalker, User
 
+
 class DogWalkerSerializer(serializers.ModelSerializer):
     class Meta:
         model = DogWalker
@@ -34,8 +35,6 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class DogOwnerSerializer(serializers.ModelSerializer):
-
-
     class Meta:
         model = DogOwner
         fields = ['email', 'user']

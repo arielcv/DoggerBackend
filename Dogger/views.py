@@ -4,7 +4,6 @@ from rest_framework.response import Response
 from .models import Dog, DogOwner, DogWalker, User
 from .serializers import DogSerializer, DogOwnerSerializer, DogWalkerSerializer, UserSerializer
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
-from rest_framework.authentication import SessionAuthentication, BasicAuthentication
 from rest_framework.permissions import IsAuthenticated
 
 
@@ -16,6 +15,8 @@ def dogOwnerList(request):
     return Response(serializer.data)
 
 @api_view(['POST'])
+@authentication_classes([])
+@permission_classes([])
 def dogOwnerSignUp(request):
     data = JSONParser().parse(request)
     print(data)
@@ -33,7 +34,7 @@ def dogOwnerSignUp(request):
             dogOwnerSerializer.save()
             return Response(dogOwnerSerializer.data, status=status.HTTP_201_CREATED)
         print('Dog Owner Error')
-        return Response(dogOwnerSerializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(userSerializer.errors, status=status.HTTP_400_BAD_REQUEST)
     print('Person Error')
     return Response(userSerializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -86,6 +87,8 @@ def dogWalkerList(request):
 
 
 @api_view(['POST'])
+@authentication_classes([])
+@permission_classes([])
 def dogWalkerSignUp(request):
     data = JSONParser().parse(request)
     print(data)
@@ -97,15 +100,11 @@ def dogWalkerSignUp(request):
         dogWalker = dict()
         dogWalker['email'] = data.pop('email')
         dogWalker['user'] = User.objects.get(username=data['name']).id
-        print(dogWalker)
-        # dogOwner['user'] = userSerializer
         dogWalkerSerializer = DogWalkerSerializer(data=dogWalker)
         if dogWalkerSerializer.is_valid():
             dogWalkerSerializer.save()
-            return Response(dogWalkerSerializer.data, status=status.HTTP_201_CREATED)
-        print('Dog Owner Error')
+            return Response(userSerializer.data, status=status.HTTP_201_CREATED)
         return Response(dogWalkerSerializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    print('Person Error')
     return Response(userSerializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
