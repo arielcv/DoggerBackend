@@ -1,39 +1,41 @@
-from django.http import HttpResponse
 from rest_framework import status
 from rest_framework.parsers import JSONParser
 from rest_framework.response import Response
 from .models import Dog, DogOwner, DogWalker, User
 from .serializers import DogSerializer, DogOwnerSerializer, DogWalkerSerializer, UserSerializer
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.authentication import SessionAuthentication, BasicAuthentication
+from rest_framework.permissions import IsAuthenticated
 
 
 # Create your views here.
-@api_view(['GET', 'POST'])
+@api_view(['GET'])
 def dogOwnerList(request):
-    if request.method == 'GET':
-        owners = DogOwner.objects.all()
-        serializer = DogOwnerSerializer(owners, many=True)
-        return Response(serializer.data)
-    elif request.method == 'POST':
-        data = JSONParser().parse(request)
-        print(data)
-        user = {'username': data['name'], 'password': data['password']}
-        print(user)
-        userSerializer = UserSerializer(data=user)
-        if userSerializer.is_valid():
-            userSerializer.save()
-            dogOwner = dict()
-            dogOwner['email'] = data.pop('email')
-            dogOwner['user'] = User.objects.get(username=data['name']).id
-            print(dogOwner)
-            dogOwnerSerializer = DogOwnerSerializer(data=dogOwner)
-            if dogOwnerSerializer.is_valid():
-                dogOwnerSerializer.save()
-                return Response(dogOwnerSerializer.data, status=status.HTTP_201_CREATED)
-            print('Dog Owner Error')
-            return Response(dogOwnerSerializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        print('Person Error')
-        return Response(userSerializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    owners = DogOwner.objects.all()
+    serializer = DogOwnerSerializer(owners, many=True)
+    return Response(serializer.data)
+
+@api_view(['POST'])
+def dogOwnerSignUp(request):
+    data = JSONParser().parse(request)
+    print(data)
+    user = {'username': data['name'], 'password': data['password']}
+    print(user)
+    userSerializer = UserSerializer(data=user)
+    if userSerializer.is_valid():
+        userSerializer.save()
+        dogOwner = dict()
+        dogOwner['email'] = data.pop('email')
+        dogOwner['user'] = User.objects.get(username=data['name']).id
+        print(dogOwner)
+        dogOwnerSerializer = DogOwnerSerializer(data=dogOwner)
+        if dogOwnerSerializer.is_valid():
+            dogOwnerSerializer.save()
+            return Response(dogOwnerSerializer.data, status=status.HTTP_201_CREATED)
+        print('Dog Owner Error')
+        return Response(dogOwnerSerializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    print('Person Error')
+    return Response(userSerializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET', 'POST'])
@@ -75,33 +77,36 @@ def dogListByOwner(request, name):
         return Response("The specified user is not an owner", status=status.HTTP_400_BAD_REQUEST)
 
 
-@api_view(['GET', 'POST'])
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def dogWalkerList(request):
-    if request.method == 'GET':
-        walkers = DogWalker.objects.all()
-        serializer = DogWalkerSerializer(walkers, many=True)
-        return Response(serializer.data)
-    elif request.method == 'POST':
-        data = JSONParser().parse(request)
-        print(data)
-        user = {'username': data['name'], 'password': data['password']}
-        print(user)
-        userSerializer = UserSerializer(data=user)
-        if userSerializer.is_valid():
-            userSerializer.save()
-            dogWalker = dict()
-            dogWalker['email'] = data.pop('email')
-            dogWalker['user'] = User.objects.get(username=data['name']).id
-            print(dogWalker)
-            # dogOwner['user'] = userSerializer
-            dogWalkerSerializer = DogWalkerSerializer(data=dogWalker)
-            if dogWalkerSerializer.is_valid():
-                dogWalkerSerializer.save()
-                return Response(dogWalkerSerializer.data, status=status.HTTP_201_CREATED)
-            print('Dog Owner Error')
-            return Response(dogWalkerSerializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        print('Person Error')
-        return Response(userSerializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    walkers = DogWalker.objects.all()
+    serializer = DogWalkerSerializer(walkers, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['POST'])
+def dogWalkerSignUp(request):
+    data = JSONParser().parse(request)
+    print(data)
+    user = {'username': data['name'], 'password': data['password']}
+    print(user)
+    userSerializer = UserSerializer(data=user)
+    if userSerializer.is_valid():
+        userSerializer.save()
+        dogWalker = dict()
+        dogWalker['email'] = data.pop('email')
+        dogWalker['user'] = User.objects.get(username=data['name']).id
+        print(dogWalker)
+        # dogOwner['user'] = userSerializer
+        dogWalkerSerializer = DogWalkerSerializer(data=dogWalker)
+        if dogWalkerSerializer.is_valid():
+            dogWalkerSerializer.save()
+            return Response(dogWalkerSerializer.data, status=status.HTTP_201_CREATED)
+        print('Dog Owner Error')
+        return Response(dogWalkerSerializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    print('Person Error')
+    return Response(userSerializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET'])
@@ -118,7 +123,7 @@ def dogOwnerDetails(request, name):
         return Response("The specified user is not an owner", status=status.HTTP_404_NOT_FOUND)
 
 
-@api_view(['GET','POST','DELETE'])
+@api_view(['GET', 'POST', 'DELETE'])
 def dogDetails(request, name):
     try:
         dog = Dog.objects.get(name=name)
@@ -139,6 +144,7 @@ def dogDetails(request, name):
 
     except Dog.DoesNotExist:
         return Response("There is no dog with that name", status=status.HTTP_404_NOT_FOUND)
+
 
 @api_view(['GET'])
 def dogWalkerDetails(request, name):
