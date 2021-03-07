@@ -2,22 +2,6 @@ from rest_framework import serializers
 from .models import Dog, DogOwner, DogWalker, User
 
 
-class DogWalkerSerializer(serializers.ModelSerializer):
-    role = serializers.CharField(default='dogWalker')
-
-    class Meta:
-        model = DogWalker
-        fields = ['email', 'user', 'role']
-
-    # def create(self, validated_data):
-    #     return DogWalker.objects.create(**validated_data)
-    #
-    # def update(self, instance, validated_data):
-    #     instance.name = validated_data.get('name', instance.name)
-    #     instance.save()
-    #     return instance
-
-
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
@@ -29,20 +13,37 @@ class UserSerializer(serializers.ModelSerializer):
         user.save()
         return user
 
-    def update(self, instance, validated_data):
-        instance.name = validated_data.get('name', instance.name)
-        instance.email = validated_data.get('name', instance.email)
-        instance.save()
-        return instance
+
+class DogWalkerSerializer(serializers.ModelSerializer):
+    role = serializers.CharField(default='dogWalker')
+    name = serializers.CharField(default='')
+
+    class Meta:
+        model = DogWalker
+        fields = ['email', 'user', 'role', 'name', 'bio', 'birthDate']
+        # depth = 1
+
+    def create(self, validated_data):
+        validated_data.pop('role')
+        return DogWalker.objects.create(**validated_data)
+    #
+    # def update(self, instance, validated_data):
+    #     instance.name = validated_data.get('name', instance.name)
+    #     instance.save()
+    #     return instance
 
 
 class DogOwnerSerializer(serializers.ModelSerializer):
     role = serializers.CharField(default='owner')
+    name = serializers.CharField(required=False)
 
     class Meta:
         model = DogOwner
-        fields = ['email', 'user', 'role']
+        fields = ['email', 'user', 'role', 'name', 'bio', 'birthDate']
 
+    def create(self, validated_data):
+        validated_data.pop('role')
+        return DogOwner.objects.create(**validated_data)
 
 class DogSerializer(serializers.ModelSerializer):
     name = serializers.CharField()

@@ -44,16 +44,16 @@ class Dog(models.Model):
 
 class DogWalker(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE,null=True)
-    name = models.CharField(max_length=50)
+    name = models.CharField(max_length=50, blank=True)
     email = models.EmailField()
     bio = models.TextField(null=True, blank=True)
     birthDate = models.DateField(null=True, blank=True)
     schedule = {}
 
     def save(self, *args, **kwargs):
-        self.name = self.user.username if self.name is None else self.name
+        self.name = self.user.username if self.name == '' else self.name
         super(DogWalker, self).save()
 
     def __str__(self):
-        return str(self.name)
+        return self.name
 

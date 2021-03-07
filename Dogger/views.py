@@ -14,6 +14,7 @@ def dogOwnerList(request):
     serializer = DogOwnerSerializer(owners, many=True)
     return Response(serializer.data)
 
+
 @api_view(['POST'])
 @authentication_classes([])
 @permission_classes([])
@@ -144,10 +145,11 @@ def dogDetails(request, name):
     except Dog.DoesNotExist:
         return Response("There is no dog with that name", status=status.HTTP_404_NOT_FOUND)
 
+
 @api_view(['GET'])
-def getUser(request,name):
+def getUser(request, name):
     try:
-        user = User.objects.get(username = name)
+        user = User.objects.get(username=name)
         (role, roleType) = getRole(user)
         print(role)
         if roleType == 'owner':
