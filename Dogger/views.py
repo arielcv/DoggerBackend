@@ -144,6 +144,33 @@ def dogDetails(request, name):
     except Dog.DoesNotExist:
         return Response("There is no dog with that name", status=status.HTTP_404_NOT_FOUND)
 
+@api_view(['GET'])
+def getUser(request,name):
+    try:
+        user = User.objects.get(username = name)
+        (role, roleType) = getRole(user)
+        print(role)
+        if roleType == 'owner':
+            serializer = DogOwnerSerializer(role)
+        elif roleType == 'walker':
+            serializer = DogWalkerSerializer(role)
+        else:
+            print("Unexpected error")
+        return Response(serializer.data)
+    except User.DoesNotExist:
+        return Response("The user does not exist", status=status.HTTP_404_NOT_FOUND)
+
+
+def getRole(user):
+    ownersFiltered = DogOwner.objects.all().filter(user=user)
+    walkersFiltered = DogWalker.objects.all().filter(user=user)
+    if ownersFiltered:
+        return (ownersFiltered[0], 'owner')
+    elif walkersFiltered:
+        return (walkersFiltered[0], 'walker')
+    else:
+        return (None, None)
+
 
 @api_view(['GET'])
 def dogWalkerDetails(request, name):

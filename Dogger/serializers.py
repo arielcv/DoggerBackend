@@ -3,17 +3,19 @@ from .models import Dog, DogOwner, DogWalker, User
 
 
 class DogWalkerSerializer(serializers.ModelSerializer):
+    role = serializers.CharField(default='dogWalker')
+
     class Meta:
         model = DogWalker
-        fields = ['email', 'user']
+        fields = ['email', 'user', 'role']
 
-    def create(self, validated_data):
-        return DogWalker.objects.create(**validated_data)
-
-    def update(self, instance, validated_data):
-        instance.name = validated_data.get('name', instance.name)
-        instance.save()
-        return instance
+    # def create(self, validated_data):
+    #     return DogWalker.objects.create(**validated_data)
+    #
+    # def update(self, instance, validated_data):
+    #     instance.name = validated_data.get('name', instance.name)
+    #     instance.save()
+    #     return instance
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -35,9 +37,11 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class DogOwnerSerializer(serializers.ModelSerializer):
+    role = serializers.CharField(default='owner')
+
     class Meta:
         model = DogOwner
-        fields = ['email', 'user']
+        fields = ['email', 'user', 'role']
 
 
 class DogSerializer(serializers.ModelSerializer):

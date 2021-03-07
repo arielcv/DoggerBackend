@@ -14,7 +14,7 @@ class DogOwner(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE,null=True)
 
     def __str__(self):
-        return str(self.id)
+        return str(self.user.username)
 
 class Dog(models.Model):
     SMALL = 'small'
