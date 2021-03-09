@@ -57,11 +57,8 @@ class DogSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         return Dog.objects.create(**validated_data)
 
-    # def update(self, instance, validated_data):
-    #     print(instance)
-    #     print(validated_data)
-    #     instance.name = validated_data.get('name', instance.name)
-    #     instance.size = validated_data.get('size', instance.size)
-    #     instance.owner = validated_data.get('owner', instance.owner)
-    #     instance.save()
-    #     return instance
+    def update(self, instance, validated_data):
+        instance.name = validated_data.get('name', instance.name)
+        instance.size = validated_data.get('size', instance.size)
+        instance.save()
+        return instance

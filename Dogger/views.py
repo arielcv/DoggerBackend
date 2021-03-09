@@ -124,14 +124,15 @@ def dogOwnerDetails(request, name):
 
 
 @api_view(['GET', 'POST', 'DELETE'])
-def dogDetails(request, name):
+def dogDetails(request, id):
     try:
-        dog = Dog.objects.get(name=name)
+        dog = Dog.objects.get(id=id)
         if request.method == "GET":
             serializer = DogSerializer(dog)
             return Response(serializer.data)
         elif request.method == "POST":
             data = JSONParser().parse(request)
+            data['owner'] = dog.owner.id
             serializer = DogSerializer(dog, data=data)
             if serializer.is_valid():
                 serializer.save()
@@ -183,129 +184,3 @@ def dogWalkerDetails(request, name):
         return Response("The user does not exist", status=status.HTTP_404_NOT_FOUND)
     except DogWalker.DoesNotExist:
         return Response("The specified user is not an walker", status=status.HTTP_404_NOT_FOUND)
-
-# user = {'name':data['name'],'email':data['email'], 'password':data['password']}
-# dogOwner = {'name':data['name'],'email':data['email']}
-# print(data)
-# print(dogOwner)
-#
-# userSerializer = UserSerializer(data=user)
-# print(userSerializer.is_valid())
-# if True:
-#     userObject = User.objects.create_user(user['name'],user['email'],user['password'])
-#     dogOwner['user'] = userObject.id
-#     serializer = DogOwnerSerializer(data=dogOwner)
-#
-#     if serializer.is_valid():
-#         userSerializer.save()
-#         serializer.save()
-#         return JSONResponse(serializer.data, status=201)
-#
-# return JSONResponse(serializer.errors, status=400)
-
-# def dogOwnerDetail(request, pk):
-#     try:
-#         dogOwner = DogOwner.objects.get(id=pk)
-#     except DogOwner.DoesNotExist:
-#         return HttpResponse(status=404)
-#
-#     if request.method == 'GET':
-#         serializer = DogSerializer(dogOwner)
-#         return JSONResponse(serializer.data)
-#
-#     elif request.method == "POST":
-#         data = JSONParser().parse(request)
-#         serializer = DogOwnerSerializer(dogOwner, data=data)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return JSONResponse(serializer.data)
-#         return JSONResponse(serializer.errors, status=400)
-#
-#     elif request.method == "DELETE":
-#         dogOwner.delete()
-#         return HttpResponse(status=204)
-#
-#
-# def dogList(request):
-#     if request.method == "GET":
-#         dogs = Dog.objects.all()
-#         serializer = DogSerializer(dogs, many=True)
-#         return JSONResponse(serializer.data)
-#
-#     elif request.method == 'POST':
-#         data = JSONParser().parse(request)
-#         serializer = DogOwnerSerializer(data=data)
-#
-#         if serializer.is_valid():
-#             serializer.save()
-#             return JSONResponse(serializer.data, status=201)
-#
-#         return JSONResponse(serializer.errors, status=400)
-#
-#
-# def dogDetail(request, pk):
-#     try:
-#         dog = Dog.objects.get(id=pk)
-#     except Dog.DoesNotExist:
-#         return HttpResponse(status=404)
-#
-#     if request.method == 'GET':
-#         serializer = DogSerializer(dog)
-#         return JSONResponse(serializer.data)
-#
-#     elif request.method == "POST":
-#         data = JSONParser().parse(request)
-#         serializer = DogSerializer(dog, data=data)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return JSONResponse(serializer.data)
-#         return JSONResponse(serializer.errors, status=400)
-#
-#     elif request.method == "DELETE":
-#         dog.delete()
-#         return HttpResponse(status=204)
-#
-#
-# def dogWalkerList(request):
-#     if request.method == "GET":
-#         dogs = DogWalker.objects.all()
-#         serializer = Dog(dogs, many=True)
-#         return JSONResponse(serializer.data)
-#
-#     elif request.method == 'POST':
-#         data = JSONParser().parse(request)
-#         serializer = DogWalkerSerializer(data=data)
-#
-#         if serializer.is_valid():
-#             serializer.save()
-#             return JSONResponse(serializer.data, status=201)
-#
-#         return JSONResponse(serializer.errors, status=400)
-#
-#
-# def dogWalkerDetail(request, pk):
-#     try:
-#         dogWalker = DogWalker.objects.get(id=pk)
-#     except Dog.DoesNotExist:
-#         return HttpResponse(status=404)
-#
-#     if request.method == 'GET':
-#         serializer = DogWalkerSerializer(dogWalker)
-#         return JSONResponse(serializer.data)
-#
-#     elif request.method == "POST":
-#         data = JSONParser().parse(request)
-#         serializer = DogWalkerSerializer(dogWalker, data=data)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return JSONResponse(serializer.data)
-#         return JSONResponse(serializer.errors, status=400)
-#
-#     elif request.method == "DELETE":
-#         dogWalker.delete()
-#         return HttpResponse(status=204)
-
-# @api_view(['GET'])
-# def current_User(request):
-#     serializer = DogOwnerSerializer
-#     return Response(serializer.data)

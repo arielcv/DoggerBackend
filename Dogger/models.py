@@ -34,7 +34,7 @@ class Dog(models.Model):
                   (MEDIUM,'Medium'),
                   (LARGE,'Large'))
 
-    name = models.CharField(max_length=50)
+    name = models.CharField(max_length=50, unique=True)
     size = models.CharField(max_length=50,choices=CATEGORIES)
     owner = models.ForeignKey(DogOwner, on_delete=models.CASCADE)
 
