@@ -15,7 +15,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class DogWalkerSerializer(serializers.ModelSerializer):
-    role = serializers.CharField(default='dogWalker')
+    role = serializers.CharField(default='walker')
     name = serializers.CharField(default='')
 
     class Meta:

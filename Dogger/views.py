@@ -127,7 +127,6 @@ def dogOwnerDetails(request, name):
 def dogDetails(request, name):
     try:
         dog = Dog.objects.get(name=name)
-
         if request.method == "GET":
             serializer = DogSerializer(dog)
             return Response(serializer.data)
@@ -141,7 +140,6 @@ def dogDetails(request, name):
         elif request.method == "DELETE":
             dog.delete()
             return Response("The dog was removed", status=status.HTTP_200_OK)
-
     except Dog.DoesNotExist:
         return Response("There is no dog with that name", status=status.HTTP_404_NOT_FOUND)
 
