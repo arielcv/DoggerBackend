@@ -4,6 +4,7 @@ from rest_framework.authtoken import views as token
 from rest_framework_simplejwt import views as jwt_views
 
 urlpatterns = [
+    url(r'^users/(?P<name>[a-zA-Z0-9_.-]+)/$', views.getUser, name='user'),
     url(r'^owners/$', views.dogOwnerList ,name = 'dogOwnerList'),
     url(r'^owners/signup/$', views.dogOwnerSignUp ,name = 'dogOwnerSignUp'),
     url(r'^owners/(?P<name>[a-zA-Z0-9_.-]+)/$', views.dogOwnerDetails, name= 'dogOwnerDetail'),
