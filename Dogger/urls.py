@@ -14,6 +14,7 @@ urlpatterns = [
     url(r'^walkers/$', views.dogWalkerList ,name = 'dogOwnerList'),
     url(r'^walkers/signup/$', views.dogWalkerSignUp ,name = 'dogOwnerList'),
     url(r'^walkers/(?P<name>[a-zA-Z0-9_.-]+)/$', views.dogWalkerDetails, name= 'dogOwnerDetail'),
+    url(r'^walkers/(?P<id>[0-9]+)/reservation/$', views.dogWalkerReservation, name= 'dogOwnerDetail'),
     url(r'^login/$', token.obtain_auth_token),
     url(r'^api/token/$', jwt_views.TokenObtainPairView.as_view(), name='token_obtain_pair'),
     url(r'^api/token/refresh/$', jwt_views.TokenRefreshView.as_view(), name='token_refresh'),

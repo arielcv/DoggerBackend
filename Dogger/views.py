@@ -1,10 +1,14 @@
 from rest_framework import status
 from rest_framework.parsers import JSONParser
 from rest_framework.response import Response
-from .models import Dog, DogOwner, DogWalker, User
-from .serializers import DogSerializer, DogOwnerSerializer, DogWalkerSerializer, UserSerializer
+from .models import Dog, DogOwner, DogWalker, User, TimeStamp
+from .serializers import DogSerializer, DogOwnerSerializer, DogWalkerSerializer, UserSerializer, DateReservedSerializer
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
+import datetime
+import pytz
+
+utc = pytz.UTC
 
 
 # Create your views here.
@@ -180,6 +184,32 @@ def dogWalkerDetails(request, name):
         dogWalker = DogWalker.objects.get(user=walkerUser)
         serializer = DogWalkerSerializer(dogWalker)
         return Response(serializer.data)
+    except User.DoesNotExist:
+        return Response("The user does not exist", status=status.HTTP_404_NOT_FOUND)
+    except DogWalker.DoesNotExist:
+        return Response("The specified user is not an walker", status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(['POST'])
+def dogWalkerReservation(request, id):
+    try:
+        walkerUser = User.objects.get(id=id)
+        dogWalker = DogWalker.objects.get(user=walkerUser)
+        dogWalker.schedule = list(TimeStamp.objects.filter(walker=dogWalker).order_by('dt'))
+        data = (JSONParser().parse(request))
+        parsedStart = ':'.join(data['start'].split(':')[0:2])
+        parsedEnd = ':'.join(data['end'].split(':')[0:2])
+        startTimeStamp = utc.localize(datetime.datetime.strptime(parsedStart, '%Y-%m-%dT%H:%M'))
+        endTimeStamp = utc.localize(datetime.datetime.strptime(parsedEnd, '%Y-%m-%dT%H:%M'))
+        startTimeStamp = TimeStamp(walker=dogWalker, dt=startTimeStamp)
+        endTimeStamp = TimeStamp(walker=dogWalker, dt=endTimeStamp)
+        update = dogWalker.assign(startTimeStamp, endTimeStamp)
+        if update:
+            for dt in update:
+                dt.save()
+            return Response("Ok", status=status.HTTP_200_OK)
+        else:
+            return Response("Error", status=status.HTTP_406_NOT_ACCEPTABLE)
     except User.DoesNotExist:
         return Response("The user does not exist", status=status.HTTP_404_NOT_FOUND)
     except DogWalker.DoesNotExist:
