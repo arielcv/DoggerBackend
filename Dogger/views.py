@@ -1,11 +1,12 @@
 from rest_framework import status
 from rest_framework.parsers import JSONParser
 from rest_framework.response import Response
-from .models import Dog, DogOwner, DogWalker, User, TimeStamp
-from .serializers import DogSerializer, DogOwnerSerializer, DogWalkerSerializer, UserSerializer, DateReservedSerializer
+from .models import Dog, DogOwner, DogWalker, User, TimeStamp, Reservation
+from .serializers import DogSerializer, DogOwnerSerializer, DogWalkerSerializer, UserSerializer, ReservationSerializer
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
 import datetime
+from dateutil.tz import tzlocal
 import pytz
 
 utc = pytz.UTC
@@ -204,10 +205,11 @@ def dogWalkerReservation(request, id):
         startTimeStamp = TimeStamp(walker=dogWalker, dt=startTimeStamp)
         endTimeStamp = TimeStamp(walker=dogWalker, dt=endTimeStamp)
         update = dogWalker.assign(startTimeStamp, endTimeStamp)
-        if update:
+        serializer = ReservationSerializer(data={'start':startTimeStamp.dt,'end':endTimeStamp.dt})
+        if update and serializer.is_valid():
             for dt in update:
                 dt.save()
-            return Response("Ok", status=status.HTTP_200_OK)
+            return Response(serializer.data, status=status.HTTP_200_OK)
         else:
             return Response("Error", status=status.HTTP_406_NOT_ACCEPTABLE)
     except User.DoesNotExist:

@@ -160,11 +160,12 @@ class DogWalker(models.Model):
             if right:
                 timeStampList = timeStampList[:-1]
             updates = self.updateInterval(timeStampList)
-            if updates:
+            if updates or updates == []:
                 arrayUpdates += updates
                 return arrayUpdates
             else:
                 return False
+
         else:
             startString.before = 0
             startString.after = 1
@@ -189,3 +190,8 @@ class DogWalker(models.Model):
                 dt.isMiddle()
                 arrayUpdates.append(dt)
         return arrayUpdates
+
+class Reservation:
+    def __init__(self, start, end):
+        self.start = start
+        self.end = end

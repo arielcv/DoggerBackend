@@ -62,3 +62,7 @@ class DogSerializer(serializers.ModelSerializer):
         instance.size = validated_data.get('size', instance.size)
         instance.save()
         return instance
+
+class ReservationSerializer(serializers.Serializer):
+    start = serializers.DateTimeField()
+    end = serializers.DateTimeField()
