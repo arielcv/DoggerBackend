@@ -191,7 +191,11 @@ class DogWalker(models.Model):
                 arrayUpdates.append(dt)
         return arrayUpdates
 
-class Reservation:
-    def __init__(self, start, end):
-        self.start = start
-        self.end = end
+
+class Reservation(models.Model):
+    start = models.DateTimeField()
+    end = models.DateTimeField()
+    dog = models.ForeignKey(Dog, on_delete=models.CASCADE)
+    walker = models.ForeignKey(DogWalker,on_delete=models.CASCADE)
+    owner = models.ForeignKey(DogOwner, on_delete=models.CASCADE)
+

@@ -6,7 +6,6 @@ from .serializers import DogSerializer, DogOwnerSerializer, DogWalkerSerializer,
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
 import datetime
-from dateutil.tz import tzlocal
 import pytz
 
 utc = pytz.UTC
@@ -27,22 +26,14 @@ def dogOwnerSignUp(request):
     data = JSONParser().parse(request)
     print(data)
     user = {'username': data['name'], 'password': data['password']}
-    print(user)
-    userSerializer = UserSerializer(data=user)
-    if userSerializer.is_valid():
-        userSerializer.save()
-        dogOwner = dict()
-        dogOwner['email'] = data.pop('email')
-        dogOwner['user'] = User.objects.get(username=data['name']).id
-        print(dogOwner)
-        dogOwnerSerializer = DogOwnerSerializer(data=dogOwner)
-        if dogOwnerSerializer.is_valid():
-            dogOwnerSerializer.save()
-            return Response(dogOwnerSerializer.data, status=status.HTTP_201_CREATED)
-        print('Dog Owner Error')
-        return Response(userSerializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    print('Person Error')
-    return Response(userSerializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    dogOwner = dict()
+    dogOwner['email'] = data.pop('email')
+    dogOwner['user'] = user
+    dogOwnerSerializer = DogOwnerSerializer(data=dogOwner)
+    if dogOwnerSerializer.is_valid():
+        dogOwnerSerializer.save()
+        return Response(dogOwnerSerializer.data, status=status.HTTP_201_CREATED)
+    return Response(dogOwnerSerializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET', 'POST'])
@@ -99,19 +90,14 @@ def dogWalkerSignUp(request):
     data = JSONParser().parse(request)
     print(data)
     user = {'username': data['name'], 'password': data['password']}
-    print(user)
-    userSerializer = UserSerializer(data=user)
-    if userSerializer.is_valid():
-        userSerializer.save()
-        dogWalker = dict()
-        dogWalker['email'] = data.pop('email')
-        dogWalker['user'] = User.objects.get(username=data['name']).id
-        dogWalkerSerializer = DogWalkerSerializer(data=dogWalker)
-        if dogWalkerSerializer.is_valid():
-            dogWalkerSerializer.save()
-            return Response(userSerializer.data, status=status.HTTP_201_CREATED)
-        return Response(dogWalkerSerializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    return Response(userSerializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    dogWalker = dict()
+    dogWalker['email'] = data.pop('email')
+    dogWalker['user'] = user
+    dogWalkerSerializer = DogWalkerSerializer(data=dogWalker)
+    if dogWalkerSerializer.is_valid():
+        dogWalkerSerializer.save()
+        return Response(dogWalkerSerializer.data, status=status.HTTP_201_CREATED)
+    return Response(dogWalkerSerializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET'])
@@ -119,7 +105,8 @@ def dogOwnerDetails(request, name):
     try:
         ownerUser = User.objects.get(username=name)
         dogOwner = DogOwner.objects.get(user=ownerUser)
-        serializer = DogOwnerSerializer(dogOwner)
+        dogs = Dog.objects.filter(owner=dogOwner)
+        serializer = DogOwnerSerializer(dogOwner, dogs=dogs)
         return Response(serializer.data)
 
     except User.DoesNotExist:
@@ -191,27 +178,44 @@ def dogWalkerDetails(request, name):
         return Response("The specified user is not an walker", status=status.HTTP_404_NOT_FOUND)
 
 
-@api_view(['POST'])
-def dogWalkerReservation(request, id):
+@api_view(['GET','POST'])
+def dogWalkerReservation(request, name):
     try:
-        walkerUser = User.objects.get(id=id)
+        walkerUser = User.objects.get(username=name)
         dogWalker = DogWalker.objects.get(user=walkerUser)
-        dogWalker.schedule = list(TimeStamp.objects.filter(walker=dogWalker).order_by('dt'))
-        data = (JSONParser().parse(request))
-        parsedStart = ':'.join(data['start'].split(':')[0:2])
-        parsedEnd = ':'.join(data['end'].split(':')[0:2])
-        startTimeStamp = utc.localize(datetime.datetime.strptime(parsedStart, '%Y-%m-%dT%H:%M'))
-        endTimeStamp = utc.localize(datetime.datetime.strptime(parsedEnd, '%Y-%m-%dT%H:%M'))
-        startTimeStamp = TimeStamp(walker=dogWalker, dt=startTimeStamp)
-        endTimeStamp = TimeStamp(walker=dogWalker, dt=endTimeStamp)
-        update = dogWalker.assign(startTimeStamp, endTimeStamp)
-        serializer = ReservationSerializer(data={'start':startTimeStamp.dt,'end':endTimeStamp.dt})
-        if update and serializer.is_valid():
-            for dt in update:
-                dt.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        else:
-            return Response("Error", status=status.HTTP_406_NOT_ACCEPTABLE)
+        if request.method == 'GET':
+            reservations = Reservation.objects.filter(walker=dogWalker)
+            serializer = ReservationSerializer(data=reservations,many=True)
+            if serializer.is_valid():
+                return Response(serializer.data)
+            else:
+                return Response('Error',status = status.HTTP_404_NOT_FOUND)
+        elif request.method == 'POST':
+            dogWalker.schedule = list(TimeStamp.objects.filter(walker=dogWalker).order_by('dt'))
+            data = (JSONParser().parse(request))
+            dog = data.pop('dog')
+            dog = Dog.objects.get(id=dog)
+            owner = dog.owner
+            parsedStart = ':'.join(data['start'].split(':')[0:2])
+            parsedEnd = ':'.join(data['end'].split(':')[0:2])
+            startTimeStamp = utc.localize(datetime.datetime.strptime(parsedStart, '%Y-%m-%dT%H:%M'))
+            endTimeStamp = utc.localize(datetime.datetime.strptime(parsedEnd, '%Y-%m-%dT%H:%M'))
+            startTimeStamp = TimeStamp(walker=dogWalker, dt=startTimeStamp)
+            endTimeStamp = TimeStamp(walker=dogWalker, dt=endTimeStamp)
+            update = dogWalker.assign(startTimeStamp, endTimeStamp)
+            serializer = ReservationSerializer(
+                data={'start': startTimeStamp.dt,
+                      'end': endTimeStamp.dt,
+                      'dog': dog.id,
+                      'walker': dogWalker.id,
+                      'owner': owner.id})
+            if update and serializer.is_valid():
+                for dt in update:
+                    dt.save()
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            else:
+                return Response("Error", status=status.HTTP_406_NOT_ACCEPTABLE)
     except User.DoesNotExist:
         return Response("The user does not exist", status=status.HTTP_404_NOT_FOUND)
     except DogWalker.DoesNotExist:

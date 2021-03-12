@@ -1,6 +1,5 @@
 from rest_framework import serializers
-from .models import Dog, DogOwner, DogWalker, User
-
+from .models import Dog, DogOwner, DogWalker, User, Reservation
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -16,39 +15,28 @@ class UserSerializer(serializers.ModelSerializer):
 
 class DogWalkerSerializer(serializers.ModelSerializer):
     role = serializers.CharField(default='walker')
-    name = serializers.CharField(default='')
+    user = UserSerializer()
 
     class Meta:
         model = DogWalker
         fields = ['email', 'user', 'role', 'name', 'bio', 'birthDate']
-        # depth = 1
 
     def create(self, validated_data):
         validated_data.pop('role')
-        return DogWalker.objects.create(**validated_data)
+        user = validated_data.pop('user')
+        userData = User.objects.create(username=user['username'],password= user['password'])
+        userData.set_password(raw_password=user['password'])
+        userData.save()
+        return DogWalker.objects.create(**validated_data,user=userData)
     #
     # def update(self, instance, validated_data):
     #     instance.name = validated_data.get('name', instance.name)
     #     instance.save()
     #     return instance
 
-
-class DogOwnerSerializer(serializers.ModelSerializer):
-    role = serializers.CharField(default='owner')
-    name = serializers.CharField(required=False)
-
-    class Meta:
-        model = DogOwner
-        fields = ['email', 'user', 'role', 'name', 'bio', 'birthDate']
-
-    def create(self, validated_data):
-        validated_data.pop('role')
-        return DogOwner.objects.create(**validated_data)
-
 class DogSerializer(serializers.ModelSerializer):
     name = serializers.CharField()
     size = serializers.CharField()
-    owner = DogOwner()
 
     class Meta:
         model = Dog
@@ -63,6 +51,27 @@ class DogSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
 
-class ReservationSerializer(serializers.Serializer):
-    start = serializers.DateTimeField()
-    end = serializers.DateTimeField()
+class DogOwnerSerializer(serializers.ModelSerializer):
+    role = serializers.CharField(default='owner')
+    user = UserSerializer()
+    dogs = DogSerializer(many = True,read_only=True)
+
+    class Meta:
+        model = DogOwner
+        fields = ['email', 'user', 'role', 'name', 'bio', 'birthDate','dogs']
+
+    def create(self, validated_data):
+        validated_data.pop('role')
+        user = validated_data.pop('user')
+        userData = User.objects.create(username=user['username'], password=user['password'])
+        userData.set_password(raw_password=user['password'])
+        userData.save()
+        return DogOwner.objects.create(**validated_data, user=userData)
+
+class ReservationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Reservation
+        fields = ['start','end','dog','walker','owner']
+
+    def create(self, validated_data):
+        return Reservation.objects.create(**validated_data)
