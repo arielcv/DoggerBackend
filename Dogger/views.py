@@ -44,12 +44,11 @@ def dogList(request):
         return Response(serializer.data)
     elif request.method == 'POST':
         data = JSONParser().parse(request)
-        ownerName = data['owner']
+        owner = data.pop('owner')
         try:
-            user = User.objects.get(username=ownerName)
-            owner = DogOwner.objects.get(user=user)
+            owner = DogOwner.objects.get(name=owner['name'])
             data['owner'] = owner.id
-            print(owner)
+            print(data)
             dogSerializer = DogSerializer(data=data)
             if dogSerializer.is_valid():
                 dogSerializer.save()
@@ -178,18 +177,30 @@ def dogWalkerDetails(request, name):
         return Response("The specified user is not an walker", status=status.HTTP_404_NOT_FOUND)
 
 
-@api_view(['GET','POST'])
+@api_view(['GET'])
+def dogOwnerReservation(request, name):
+    try:
+        ownerUser = User.objects.get(username=name)
+        dogOwner = DogOwner.objects.get(user=ownerUser)
+        reservations = Reservation.objects.filter(owner=dogOwner).all()
+        serializer = ReservationSerializer(reservations, many=True)
+        return Response(serializer.data)
+
+    except User.DoesNotExist:
+        return Response("The user does not exist", status=status.HTTP_404_NOT_FOUND)
+    except DogOwner.DoesNotExist:
+        return Response("The specified user is not an owner", status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(['GET', 'POST'])
 def dogWalkerReservation(request, name):
     try:
         walkerUser = User.objects.get(username=name)
         dogWalker = DogWalker.objects.get(user=walkerUser)
         if request.method == 'GET':
-            reservations = Reservation.objects.filter(walker=dogWalker)
-            serializer = ReservationSerializer(data=reservations,many=True)
-            if serializer.is_valid():
-                return Response(serializer.data)
-            else:
-                return Response('Error',status = status.HTTP_404_NOT_FOUND)
+            reservations = Reservation.objects.filter(walker=dogWalker).all()
+            serializer = ReservationSerializer(reservations, many=True)
+            return Response(serializer.data)
         elif request.method == 'POST':
             dogWalker.schedule = list(TimeStamp.objects.filter(walker=dogWalker).order_by('dt'))
             data = (JSONParser().parse(request))
@@ -203,12 +214,10 @@ def dogWalkerReservation(request, name):
             startTimeStamp = TimeStamp(walker=dogWalker, dt=startTimeStamp)
             endTimeStamp = TimeStamp(walker=dogWalker, dt=endTimeStamp)
             update = dogWalker.assign(startTimeStamp, endTimeStamp)
-            serializer = ReservationSerializer(
-                data={'start': startTimeStamp.dt,
-                      'end': endTimeStamp.dt,
-                      'dog': dog.id,
-                      'walker': dogWalker.id,
-                      'owner': owner.id})
+            data['dogId'] = dog.id
+            data['walkerId'] = dogWalker.id
+            data['ownerId'] = owner.id
+            serializer = ReservationSerializer(data=data)
             if update and serializer.is_valid():
                 for dt in update:
                     dt.save()
@@ -219,4 +228,4 @@ def dogWalkerReservation(request, name):
     except User.DoesNotExist:
         return Response("The user does not exist", status=status.HTTP_404_NOT_FOUND)
     except DogWalker.DoesNotExist:
-        return Response("The specified user is not an walker", status=status.HTTP_404_NOT_FOUND)
+        return Response("The specified user is not a walker", status=status.HTTP_404_NOT_FOUND)

@@ -25,7 +25,6 @@ class DogOwner(models.Model):
     def __str__(self):
         return str(self.name)
 
-
 class Dog(models.Model):
     SMALL = 'small'
     MEDIUM = 'medium'
@@ -198,4 +197,5 @@ class Reservation(models.Model):
     dog = models.ForeignKey(Dog, on_delete=models.CASCADE)
     walker = models.ForeignKey(DogWalker,on_delete=models.CASCADE)
     owner = models.ForeignKey(DogOwner, on_delete=models.CASCADE)
+    confirmed = models.BooleanField(default=False)
 

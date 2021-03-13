@@ -8,6 +8,7 @@ urlpatterns = [
     url(r'^owners/$', views.dogOwnerList ,name = 'dogOwnerList'),
     url(r'^owners/signup/$', views.dogOwnerSignUp ,name = 'dogOwnerSignUp'),
     url(r'^owners/(?P<name>[a-zA-Z0-9_.-]+)/$', views.dogOwnerDetails, name= 'dogOwnerDetail'),
+    url(r'^owners/(?P<name>[a-zA-Z0-9_.-]+)/reservation/$', views.dogOwnerReservation, name= 'dogOwnerDetail'),
     url(r'^dogs/$', views.dogList ,name = 'dogOwnerList'),
     url(r'^dogs/owner/(?P<name>[a-zA-Z0-9_.-]+)/$', views.dogListByOwner, name= 'dogOwnerDetail'),
     url(r'^dogs/(?P<id>[0-9]+)/$', views.dogDetails, name= 'dogOwnerDetail'),
