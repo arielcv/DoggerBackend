@@ -2,7 +2,7 @@ from rest_framework import status
 from rest_framework.parsers import JSONParser
 from rest_framework.response import Response
 from .models import Dog, DogOwner, DogWalker, User, TimeStamp, Reservation, WalkerConstraint
-from .serializers import DogSerializer, DogOwnerSerializer, DogWalkerSerializer, UserSerializer, ReservationSerializer
+from .serializers import DogSerializer, DogOwnerSerializer, DogWalkerSerializer, UserSerializer, ReservationSerializer, ConstraintSerializer
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
 import datetime
@@ -252,3 +252,31 @@ def dogWalkerReservation(request, name):
         return Response("The specified user is not a walker", status=status.HTTP_404_NOT_FOUND)
 
 
+@api_view(['GET', 'POST'])
+def dogWalkerConstraintsList(request, name):
+    try:
+        dogWalker = DogWalker.objects.get(name=name)
+        if request.method == 'GET':
+            constraints = list(WalkerConstraint.objects.filter(walker=dogWalker))
+            serializer = ConstraintSerializer(constraints,many=True)
+            return Response(serializer.data,status=status.HTTP_200_OK)
+    except User.DoesNotExist:
+            return Response("The user does not exist", status=status.HTTP_404_NOT_FOUND)
+    except DogWalker.DoesNotExist:
+        return Response("The specified user is not a walker", status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(['GET','POST','DELETE'])
+def dogWalkerConstraintsDetails(request, id):
+    try:
+        constraint = WalkerConstraint.objects.get(id = id)
+        if request.method == 'GET':
+            serializer = ConstraintSerializer(constraint)
+            return Response(serializer.data,status=status.HTTP_200_OK)
+        elif request.method == 'DELETE':
+            constraint.delete()
+            return Response('Deletion Completed', status=status.HTTP_200_OK)
+    except User.DoesNotExist:
+            return Response("The user does not exist", status=status.HTTP_404_NOT_FOUND)
+    except DogWalker.DoesNotExist:
+        return Response("The specified user is not a walker", status=status.HTTP_404_NOT_FOUND)

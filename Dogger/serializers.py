@@ -99,5 +99,9 @@ class ReservationSerializer(serializers.ModelSerializer):
 
 
 class ConstraintSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(read_only=True)
+    walkerId = serializers.IntegerField(write_only=True)
+
     class Meta:
         model = WalkerConstraint
+        fields = ['id','walkerId','start','end','sizesAllowed']
