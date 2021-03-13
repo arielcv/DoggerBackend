@@ -68,17 +68,18 @@ class DogOwnerSerializer(serializers.ModelSerializer):
         return DogOwner.objects.create(**validated_data, user=userData)
 
 class ReservationSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(read_only=True)
     dog = DogSerializer(read_only=True)
     walker = DogWalkerSerializer(read_only=True)
     owner = DogOwnerSerializer(read_only=True)
 
-    dogId = serializers.IntegerField(write_only=True)
-    walkerId = serializers.IntegerField(write_only=True)
-    ownerId = serializers.IntegerField(write_only=True)
+    dogId = serializers.IntegerField(write_only=True,required=False)
+    walkerId = serializers.IntegerField(write_only=True,required=False)
+    ownerId = serializers.IntegerField(write_only=True,required=False)
 
     class Meta:
         model = Reservation
-        fields = ['start','end','dog','walker','owner','dogId','walkerId','ownerId','confirmed']
+        fields = ['id','start','end','dog','walker','owner','dogId','walkerId','ownerId','confirmed']
 
     def create(self, validated_data):
         dogId = validated_data.pop('dogId')
@@ -88,3 +89,8 @@ class ReservationSerializer(serializers.ModelSerializer):
         ownerId = validated_data.pop('ownerId')
         owner = DogOwner.objects.get(id=ownerId)
         return Reservation.objects.create(**validated_data,dog=dog,walker=walker,owner=owner)
+
+    def update(self, instance, validated_data):
+        instance.confirmed = validated_data.get('confirmed', instance.confirmed)
+        instance.save()
+        return instance
