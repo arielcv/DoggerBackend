@@ -54,15 +54,28 @@ class TimeStamp(models.Model):
     def couldBeBegin(self):
         return True if self.after < 3 else False
 
+    def decreaseBefore(self):
+        self.before -= 1
+
     def isEnd(self):
         self.before += 1
 
     def couldBeEnd(self):
         return True if self.before < 3 else False
 
+    def decreaseAfter(self):
+        self.after -= 1
+
+    def decreaseBoth(self):
+        self.decreaseBefore()
+        self.decreaseAfter()
+
     def isMiddle(self):
         self.isBegin()
         self.isEnd()
+
+    def isNull(self):
+        return True if self.before == 0 and self.after == 0 else False
 
     def couldBeMiddle(self):
         return True if self.couldBeBegin() and self.couldBeEnd() else False
@@ -104,12 +117,16 @@ class DogWalker(models.Model):
 
     def save(self, *args, **kwargs):
         self.name = self.user.username if self.name == '' else self.name
+        print('a')
         super(DogWalker, self).save()
+        print('a')
+        if not(WalkerConstraint.objects.filter(walker=self.id)):
+            WalkerConstraint.objects.create(walker=self)
 
     def __str__(self):
         return self.name
 
-    def assign(self, startString, endString):
+    def assign(self, startString, endString, dogSize):
 
         lowerList = TimeStamp.objects.filter(dt__lt=startString.dt, walker=self)
         upperList = TimeStamp.objects.filter(dt__gt=endString.dt, walker=self)
@@ -164,7 +181,6 @@ class DogWalker(models.Model):
                 return arrayUpdates
             else:
                 return False
-
         else:
             startString.before = 0
             startString.after = 1
@@ -198,4 +214,20 @@ class Reservation(models.Model):
     walker = models.ForeignKey(DogWalker,on_delete=models.CASCADE)
     owner = models.ForeignKey(DogOwner, on_delete=models.CASCADE)
     confirmed = models.BooleanField(default=False)
+
+class WalkerConstraint(models.Model):
+    SMALL = 'small'
+    MEDIUM = 'medium'
+    LARGE = "large"
+    ALL = 'all'
+
+    CATEGORIES = ((SMALL, 'Small'),
+                  (MEDIUM, 'Medium'),
+                  (LARGE, 'Large'),
+                  (ALL, 'All'))
+
+    walker = models.ForeignKey(DogWalker,on_delete=models.CASCADE)
+    start = models.TimeField(default=datetime.time(hour=8,minute=0))
+    end = models.TimeField(default=datetime.time(hour=17, minute=0))
+    sizesAllowed = models.CharField(max_length=50, choices=CATEGORIES, default=ALL)
 

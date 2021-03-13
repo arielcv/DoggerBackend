@@ -1,12 +1,13 @@
 from rest_framework import status
 from rest_framework.parsers import JSONParser
 from rest_framework.response import Response
-from .models import Dog, DogOwner, DogWalker, User, TimeStamp, Reservation
+from .models import Dog, DogOwner, DogWalker, User, TimeStamp, Reservation, WalkerConstraint
 from .serializers import DogSerializer, DogOwnerSerializer, DogWalkerSerializer, UserSerializer, ReservationSerializer
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
 import datetime
 import pytz
+from .utils import signUser
 
 utc = pytz.UTC
 
@@ -23,13 +24,8 @@ def dogOwnerList(request):
 @authentication_classes([])
 @permission_classes([])
 def dogOwnerSignUp(request):
-    data = JSONParser().parse(request)
-    print(data)
-    user = {'username': data['name'], 'password': data['password']}
-    dogOwner = dict()
-    dogOwner['email'] = data.pop('email')
-    dogOwner['user'] = user
-    dogOwnerSerializer = DogOwnerSerializer(data=dogOwner)
+    userDict = signUser(request)
+    dogOwnerSerializer = DogOwnerSerializer(data=userDict)
     if dogOwnerSerializer.is_valid():
         dogOwnerSerializer.save()
         return Response(dogOwnerSerializer.data, status=status.HTTP_201_CREATED)
@@ -86,13 +82,8 @@ def dogWalkerList(request):
 @authentication_classes([])
 @permission_classes([])
 def dogWalkerSignUp(request):
-    data = JSONParser().parse(request)
-    print(data)
-    user = {'username': data['name'], 'password': data['password']}
-    dogWalker = dict()
-    dogWalker['email'] = data.pop('email')
-    dogWalker['user'] = user
-    dogWalkerSerializer = DogWalkerSerializer(data=dogWalker)
+    userDict = signUser(request)
+    dogWalkerSerializer = DogWalkerSerializer(data=userDict)
     if dogWalkerSerializer.is_valid():
         dogWalkerSerializer.save()
         return Response(dogWalkerSerializer.data, status=status.HTTP_201_CREATED)
@@ -192,7 +183,7 @@ def dogOwnerReservation(request, name):
         return Response("The specified user is not an owner", status=status.HTTP_404_NOT_FOUND)
 
 
-@api_view(['GET', 'POST','PATCH'])
+@api_view(['GET', 'POST', 'PATCH', 'DELETE'])
 def dogWalkerReservation(request, name):
     try:
         walkerUser = User.objects.get(username=name)
@@ -209,32 +200,55 @@ def dogWalkerReservation(request, name):
             owner = dog.owner
             parsedStart = ':'.join(data['start'].split(':')[0:2])
             parsedEnd = ':'.join(data['end'].split(':')[0:2])
-            startTimeStamp = utc.localize(datetime.datetime.strptime(parsedStart, '%Y-%m-%dT%H:%M'))
-            endTimeStamp = utc.localize(datetime.datetime.strptime(parsedEnd, '%Y-%m-%dT%H:%M'))
-            startTimeStamp = TimeStamp(walker=dogWalker, dt=startTimeStamp)
-            endTimeStamp = TimeStamp(walker=dogWalker, dt=endTimeStamp)
-            update = dogWalker.assign(startTimeStamp, endTimeStamp)
+            startDatetime = utc.localize(datetime.datetime.strptime(parsedStart, '%Y-%m-%dT%H:%M'))
+            endDatetime = utc.localize(datetime.datetime.strptime(parsedEnd, '%Y-%m-%dT%H:%M'))
+            startTimeStamp = TimeStamp(walker=dogWalker, dt=startDatetime)
+            endTimeStamp = TimeStamp(walker=dogWalker, dt=endDatetime)
+            update = dogWalker.assign(startTimeStamp, endTimeStamp, dog.size)
             data['dogId'] = dog.id
             data['walkerId'] = dogWalker.id
             data['ownerId'] = owner.id
-            serializer = ReservationSerializer(data=data)
-            if update and serializer.is_valid():
-                for dt in update:
-                    dt.save()
+            constraints = WalkerConstraint.objects.filter(walker=dogWalker,
+                                                          sizesAllowed__in=[dog.size, 'all'],
+                                                          start__lte=datetime.time(hour=startDatetime.hour,
+                                                                                   minute=startDatetime.minute),
+                                                          end__gte=datetime.time(hour=endDatetime.hour,
+                                                                                 minute=endDatetime.minute))
+            if constraints:
+                serializer = ReservationSerializer(data=data)
+                if update and serializer.is_valid():
+                    for dt in update:
+                        dt.save()
+                    serializer.save()
+                    return Response(serializer.data, status=status.HTTP_200_OK)
+                else:
+                    return Response("Error", status=status.HTTP_406_NOT_ACCEPTABLE)
+            else:
+                return Response('There are no times available for your reservation', status=status.HTTP_403_FORBIDDEN)
+        elif request.method == 'PATCH':
+            data = (JSONParser().parse(request))
+            reservation = Reservation.objects.filter(walker=dogWalker).filter(id=data['id'])[0]
+            serializer = ReservationSerializer(reservation, data={'confirmed': True}, partial=True)
+            if serializer.is_valid():
                 serializer.save()
                 return Response(serializer.data, status=status.HTTP_200_OK)
             else:
-                return Response("Error", status=status.HTTP_406_NOT_ACCEPTABLE)
-        elif request.method == 'PATCH':
+                return Response(serializer.errors, status=status.HTTP_406_NOT_ACCEPTABLE)
+        elif request.method == 'DELETE':
             data = (JSONParser().parse(request))
-            reservation = Reservation.objects.filter(walker=dogWalker).filter(id = data['id'])[0]
-            serializer = ReservationSerializer(reservation,data={'confirmed':True},partial=True)
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data,status=status.HTTP_200_OK)
-            else:
-                return Response(serializer.errors,status=status.HTTP_406_NOT_ACCEPTABLE)
+            reservation = Reservation.objects.filter(walker=dogWalker).filter(id=data['id'])[0]
+            start = reservation.start
+            end = reservation.end
+            reservationInterval = TimeStamp.objects.filter(dt__gte=start - datetime.timedelta(minutes=1)).filter(
+                dt__lte=end + datetime.timedelta(minutes=1))
+            for r in reservationInterval:
+                r.decreaseBoth()
+                r.delete() if r.isNull() else r.save()
+                reservation.delete()
+
     except User.DoesNotExist:
         return Response("The user does not exist", status=status.HTTP_404_NOT_FOUND)
     except DogWalker.DoesNotExist:
         return Response("The specified user is not a walker", status=status.HTTP_404_NOT_FOUND)
+
+

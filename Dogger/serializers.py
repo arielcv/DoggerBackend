@@ -1,11 +1,15 @@
 from rest_framework import serializers
-from .models import Dog, DogOwner, DogWalker, User, Reservation
+from .models import Dog, DogOwner, DogWalker, User, Reservation, WalkerConstraint
+from .utils import createUser
+
 
 class UserSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(read_only=True)
     password = serializers.CharField(write_only=True)
+
     class Meta:
         model = User
-        fields = ['username', 'password']
+        fields = ['id', 'username', 'password']
 
     def create(self, validated_data):
         user = User.objects.create(**validated_data)
@@ -15,31 +19,31 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class DogWalkerSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(read_only=True)
     role = serializers.CharField(default='walker')
     user = UserSerializer()
 
     class Meta:
         model = DogWalker
-        fields = ['email', 'user', 'role', 'name', 'bio', 'birthDate']
+        fields = ['id', 'email', 'user', 'role', 'name', 'bio', 'birthDate']
 
     def create(self, validated_data):
-        validated_data.pop('role')
-        user = validated_data.pop('user')
-        userData = User.objects.create(username=user['username'],password= user['password'])
-        userData.set_password(raw_password=user['password'])
-        userData.save()
-        return DogWalker.objects.create(**validated_data,user=userData)
+        userData = createUser(validated_data)
+        return DogWalker.objects.create(**validated_data, user=userData)
+
     #
     # def update(self, instance, validated_data):
     #     instance.name = validated_data.get('name', instance.name)
     #     instance.save()
     #     return instance
 
+
 class DogSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(read_only=True)
+
     class Meta:
         model = Dog
-        fields = ['id','name','size','owner']
+        fields = ['id', 'name', 'size', 'owner']
 
     def create(self, validated_data):
         return Dog.objects.create(**validated_data)
@@ -50,22 +54,20 @@ class DogSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
 
+
 class DogOwnerSerializer(serializers.ModelSerializer):
     role = serializers.CharField(default='owner')
     user = UserSerializer()
-    dogs = DogSerializer(many = True,read_only=True)
+    dogs = DogSerializer(many=True, read_only=True)
 
     class Meta:
         model = DogOwner
-        fields = ['id','email', 'user', 'role', 'name', 'bio', 'birthDate','dogs']
+        fields = ['id', 'email', 'user', 'role', 'name', 'bio', 'birthDate', 'dogs']
 
     def create(self, validated_data):
-        validated_data.pop('role')
-        user = validated_data.pop('user')
-        userData = User.objects.create(username=user['username'], password=user['password'])
-        userData.set_password(raw_password=user['password'])
-        userData.save()
+        userData = createUser(validated_data)
         return DogOwner.objects.create(**validated_data, user=userData)
+
 
 class ReservationSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(read_only=True)
@@ -73,24 +75,29 @@ class ReservationSerializer(serializers.ModelSerializer):
     walker = DogWalkerSerializer(read_only=True)
     owner = DogOwnerSerializer(read_only=True)
 
-    dogId = serializers.IntegerField(write_only=True,required=False)
-    walkerId = serializers.IntegerField(write_only=True,required=False)
-    ownerId = serializers.IntegerField(write_only=True,required=False)
+    dogId = serializers.IntegerField(write_only=True, required=False)
+    walkerId = serializers.IntegerField(write_only=True, required=False)
+    ownerId = serializers.IntegerField(write_only=True, required=False)
 
     class Meta:
         model = Reservation
-        fields = ['id','start','end','dog','walker','owner','dogId','walkerId','ownerId','confirmed']
+        fields = ['id', 'start', 'end', 'dog', 'walker', 'owner', 'dogId', 'walkerId', 'ownerId', 'confirmed']
 
     def create(self, validated_data):
         dogId = validated_data.pop('dogId')
-        dog = Dog.objects.get(id = dogId)
+        dog = Dog.objects.get(id=dogId)
         walkerId = validated_data.pop('walkerId')
         walker = DogWalker.objects.get(id=walkerId)
         ownerId = validated_data.pop('ownerId')
         owner = DogOwner.objects.get(id=ownerId)
-        return Reservation.objects.create(**validated_data,dog=dog,walker=walker,owner=owner)
+        return Reservation.objects.create(**validated_data, dog=dog, walker=walker, owner=owner)
 
     def update(self, instance, validated_data):
         instance.confirmed = validated_data.get('confirmed', instance.confirmed)
         instance.save()
         return instance
+
+
+class ConstraintSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WalkerConstraint
