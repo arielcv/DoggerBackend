@@ -1,5 +1,9 @@
+import datetime
 from rest_framework.parsers import JSONParser
 from .models import User, DogOwner, Dog
+import pytz
+
+utc = pytz.UTC
 
 def dogListByOwner(name):
     user = User.objects.get(username=name)
@@ -23,3 +27,10 @@ def signUser(request):
     userDict['email'] = data.pop('email')
     userDict['user'] = user
     return userDict
+
+def parseDateTime(data):
+    parsedStart = ':'.join(data['start'].split(':')[0:2])
+    parsedEnd = ':'.join(data['end'].split(':')[0:2])
+    startDatetime = utc.localize(datetime.datetime.strptime(parsedStart, '%Y-%m-%dT%H:%M'))
+    endDatetime = utc.localize(datetime.datetime.strptime(parsedEnd, '%Y-%m-%dT%H:%M'))
+    return (startDatetime,endDatetime)

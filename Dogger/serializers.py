@@ -105,3 +105,11 @@ class ConstraintSerializer(serializers.ModelSerializer):
     class Meta:
         model = WalkerConstraint
         fields = ['id','walkerId','start','end','sizesAllowed']
+
+    def create(self,validated_data):
+        walkerId = validated_data.pop('walkerId')
+        if walkerId != -1:
+            walker = DogWalker.objects.get(id=walkerId)
+            return WalkerConstraint.objects.create(**validated_data,walker=walker)
+        else:
+            return WalkerConstraint.objects.create(**validated_data)

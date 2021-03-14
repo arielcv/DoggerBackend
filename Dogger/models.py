@@ -211,7 +211,7 @@ class Reservation(models.Model):
     start = models.DateTimeField()
     end = models.DateTimeField()
     dog = models.ForeignKey(Dog, on_delete=models.CASCADE)
-    walker = models.ForeignKey(DogWalker,on_delete=models.CASCADE)
+    walker = models.ForeignKey(DogWalker,on_delete=models.CASCADE,blank=True,null=True)
     owner = models.ForeignKey(DogOwner, on_delete=models.CASCADE)
     confirmed = models.BooleanField(default=False)
 
@@ -226,7 +226,7 @@ class WalkerConstraint(models.Model):
                   (LARGE, 'Large'),
                   (ALL, 'All'))
 
-    walker = models.ForeignKey(DogWalker,on_delete=models.CASCADE)
+    walker = models.ForeignKey(DogWalker,on_delete=models.CASCADE,blank=True, null=True)
     start = models.TimeField(default=datetime.time(hour=8,minute=0))
     end = models.TimeField(default=datetime.time(hour=17, minute=0))
     sizesAllowed = models.CharField(max_length=50, choices=CATEGORIES, default=ALL)

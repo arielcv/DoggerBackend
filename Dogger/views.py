@@ -2,12 +2,13 @@ from rest_framework import status
 from rest_framework.parsers import JSONParser
 from rest_framework.response import Response
 from .models import Dog, DogOwner, DogWalker, User, TimeStamp, Reservation, WalkerConstraint
-from .serializers import DogSerializer, DogOwnerSerializer, DogWalkerSerializer, UserSerializer, ReservationSerializer, ConstraintSerializer
+from .serializers import DogSerializer, DogOwnerSerializer, DogWalkerSerializer, UserSerializer, ReservationSerializer, \
+    ConstraintSerializer
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
 import datetime
 import pytz
-from .utils import signUser
+from .utils import signUser, parseDateTime
 
 utc = pytz.UTC
 
@@ -189,19 +190,18 @@ def dogWalkerReservation(request, name):
         walkerUser = User.objects.get(username=name)
         dogWalker = DogWalker.objects.get(user=walkerUser)
         if request.method == 'GET':
-            reservations = Reservation.objects.filter(walker=dogWalker).all()
-            serializer = ReservationSerializer(reservations, many=True)
-            return Response(serializer.data)
+            reservationsAssigned = Reservation.objects.filter(walker=dogWalker).all()
+            reservationsUnassigned = Reservation.objects.filter(walker=None).all()
+            serializerAssigned = ReservationSerializer(reservationsAssigned, many=True)
+            serializerUnassigned = ReservationSerializer(reservationsUnassigned, many=True)
+            return Response([serializerAssigned.data,serializerUnassigned.data])
         elif request.method == 'POST':
             data = (JSONParser().parse(request))
             dogWalker.schedule = list(TimeStamp.objects.filter(walker=dogWalker).order_by('dt'))
             dog = data.pop('dog')
             dog = Dog.objects.get(id=dog)
             owner = dog.owner
-            parsedStart = ':'.join(data['start'].split(':')[0:2])
-            parsedEnd = ':'.join(data['end'].split(':')[0:2])
-            startDatetime = utc.localize(datetime.datetime.strptime(parsedStart, '%Y-%m-%dT%H:%M'))
-            endDatetime = utc.localize(datetime.datetime.strptime(parsedEnd, '%Y-%m-%dT%H:%M'))
+            (startDatetime, endDatetime) = parseDateTime(data)
             startTimeStamp = TimeStamp(walker=dogWalker, dt=startDatetime)
             endTimeStamp = TimeStamp(walker=dogWalker, dt=endDatetime)
             update = dogWalker.assign(startTimeStamp, endTimeStamp, dog.size)
@@ -258,25 +258,63 @@ def dogWalkerConstraintsList(request, name):
         dogWalker = DogWalker.objects.get(name=name)
         if request.method == 'GET':
             constraints = list(WalkerConstraint.objects.filter(walker=dogWalker))
-            serializer = ConstraintSerializer(constraints,many=True)
-            return Response(serializer.data,status=status.HTTP_200_OK)
+            serializer = ConstraintSerializer(constraints, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        elif request.method == 'POST':
+            data = JSONParser().parse(request)
+            print(data['start'])
+            (startDatetime, endDatetime) = parseDateTime(data)
+            data['start'] = datetime.time(hour=startDatetime.hour, minute=startDatetime.minute,
+                                          second=startDatetime.second)
+            data['end'] = datetime.time(hour=endDatetime.hour, minute=endDatetime.minute,
+                                          second=endDatetime.second)
+            data['walkerId'] = dogWalker.id
+            sizes = data.pop('sizesAllowed')
+            serializerList =[]
+            for size in sizes:
+                data['sizesAllowed'] = size
+                serializer = ConstraintSerializer(data=data)
+                if serializer.is_valid():
+                    serializer.save()
+                    serializerList.append(serializer.data)
+                else:
+                    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                response = ConstraintSerializer(serializerList, many=True)
+                return Response(response.data,status=status.HTTP_200_OK)
     except User.DoesNotExist:
-            return Response("The user does not exist", status=status.HTTP_404_NOT_FOUND)
+        return Response("The user does not exist", status=status.HTTP_404_NOT_FOUND)
     except DogWalker.DoesNotExist:
         return Response("The specified user is not a walker", status=status.HTTP_404_NOT_FOUND)
 
 
-@api_view(['GET','POST','DELETE'])
+@api_view(['GET', 'POST', 'DELETE'])
 def dogWalkerConstraintsDetails(request, id):
     try:
-        constraint = WalkerConstraint.objects.get(id = id)
+        constraint = WalkerConstraint.objects.get(id=id)
         if request.method == 'GET':
             serializer = ConstraintSerializer(constraint)
-            return Response(serializer.data,status=status.HTTP_200_OK)
+            return Response(serializer.data, status=status.HTTP_200_OK)
         elif request.method == 'DELETE':
             constraint.delete()
             return Response('Deletion Completed', status=status.HTTP_200_OK)
     except User.DoesNotExist:
-            return Response("The user does not exist", status=status.HTTP_404_NOT_FOUND)
+        return Response("The user does not exist", status=status.HTTP_404_NOT_FOUND)
     except DogWalker.DoesNotExist:
         return Response("The specified user is not a walker", status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['PATCH'])
+def acceptReservation(request,id):
+    try:
+        data = JSONParser().parse(request)
+        reservation = Reservation.objects.get(id = id)
+        walker = DogWalker.objects.get(name=data['walker'])
+        reservation.walker = walker
+        reservation.confirmed = True
+        reservation.save()
+        serializer = ReservationSerializer(reservation)
+        return Response(serializer.data,status=status.HTTP_200_OK)
+    except Reservation.DoesNotExist:
+        return Response('Error',status=status.HTTP_404_BAD_REQUEST)
+    except DogWalker.DoesNotExist:
+        return Response('Error',status=status.HTTP_404_BAD_REQUEST)
