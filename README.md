@@ -8,7 +8,7 @@ Aplicación destinada a conectar dueños de perros (Owners) con paseadores de pe
 
 El backend implementa una API para la aplicación Dogger. Los endpoints son:
 
-//Acceso a los datos básicos de usuario: Nombre de Usuario y Contraseña [GET]
+#Acceso a los datos básicos de usuario: Nombre de Usuario y Contraseña [GET]
 * url(r'^users/(?P<name>[a-zA-Z0-9_.-]+)/$', views.getUser, name='user'),
 
 //Lista los dueños de perros [GET]
